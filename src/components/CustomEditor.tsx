@@ -3,7 +3,6 @@ import TextArea from "./TextArea";
 import RowControl from "./RowControl";
 import SpacingControl from "./SpacingControl";
 import snApi from "../api/snApi";
-import LogOutput from "./LogOutput";
 import {useEffect} from "preact/compat";
 
 const CustomEditor = () => {
@@ -21,7 +20,6 @@ const CustomEditor = () => {
         <SpacingControl/>
         <RowControl/>
         <TextArea/>
-        <LogOutput></LogOutput>
       </div>
     );
   } else {

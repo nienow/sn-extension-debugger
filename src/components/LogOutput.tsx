@@ -7,7 +7,7 @@ const LogOutput = () => {
 
   useEffect(() => {
     setInterval(() => {
-      setLogs(output_logs);
+      setLogs([...output_logs]);
     }, 1000);
   }, []);
 

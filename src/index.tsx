@@ -4,7 +4,7 @@ import './index.scss';
 import {createRoot} from "react-dom/client";
 import {StrictMode} from "preact/compat";
 import LogOutput from "./components/LogOutput";
-import ComponentRelay from "./relay/ComponentRelay";
+import {snApi} from "./relay/ComponentRelay";
 import {all_logs} from "./relay/Logger";
 
 const root = createRoot(document.getElementById('root'));
@@ -16,15 +16,11 @@ root.render(
     </StrictMode>
 );
 
-const componentRelay = new ComponentRelay({
-    targetWindow: window,
-    options: {},
-    handleRequestForContentHeight: () => {
-        return undefined;
-    }
+snApi.initialize({
+    debounceSave: 400
 });
 
-componentRelay.streamContextItem((note) => {
+snApi.streamContextItem((note) => {
     all_logs.push('got note: ' + JSON.stringify(note));
 });
 

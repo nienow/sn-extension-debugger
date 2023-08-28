@@ -8,17 +8,16 @@ import type {
 } from '@standardnotes/snjs'
 import {environmentToString, generateUuid, isValidJsonString} from './Utils'
 import Logger from './Logger'
-import {ComponentRelayParams} from './Types/ComponentRelayParams'
 import {MessagePayload} from './Types/MessagePayload'
 import {Component} from './Types/Component'
 import {MessagePayloadApi} from './Types/MessagePayloadApi'
-import {ComponentRelayOptions} from './Types/ComponentRelayOptions'
 import {ComponentAction} from './Types/ComponentAction'
 import {Environment} from './Types/Environment'
+import {SnMediatorOptions} from "../api/sn-types";
 
 const DEFAULT_COALLESED_SAVING_DELAY = 250
 
-export default class ComponentRelay {
+class ComponentRelay {
     private contentWindow: Window
     private component: Component = {activeThemes: [], acceptsThemes: true}
     private sentMessages: MessagePayload[] = []
@@ -29,33 +28,32 @@ export default class ComponentRelay {
     private pendingSaveParams?: any
     private messageHandler?: (event: any) => void
     private concernTimeouts: NodeJS.Timeout[] = []
-    private options: ComponentRelayOptions
-    private params: Omit<ComponentRelayParams, 'options'>
+    private coallesedSavingDelay;
+    private subscriptions = [];
 
-    constructor(params: ComponentRelayParams) {
-        if (!params || !params.targetWindow) {
-            throw new Error('contentWindow must be a valid Window object.')
+
+    public initialize(options: SnMediatorOptions = {}) {
+        Logger.info('debug 2');
+
+        if (this.contentWindow) {
+            Logger.error('fatal: cannot call initialize more than once');
+            return;
         }
+        this.coallesedSavingDelay = typeof options.debounceSave !== 'undefined' ? options.debounceSave : DEFAULT_COALLESED_SAVING_DELAY;
+        this.contentWindow = window;
 
-        this.params = params
+        this.registerMessageHandler();
 
-        this.options = params.options || {}
+        this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
+            const {item} = data;
 
-        if (this.options.coallesedSaving == undefined) {
-            this.options.coallesedSaving = true
-        }
-        if (this.options.coallesedSavingDelay == undefined) {
-            this.options.coallesedSavingDelay = DEFAULT_COALLESED_SAVING_DELAY
-        }
-        if (this.options.acceptsThemes != undefined) {
-            this.component.acceptsThemes = this.options.acceptsThemes ?? true
-        }
-
-        Logger.enabled = this.options.debug ?? false
-        Logger.info('debug 1');
-
-        this.contentWindow = params.targetWindow
-        this.registerMessageHandler()
+            this.lastStreamedItem = item;
+            if (!this.lastStreamedItem.isMetadataUpdate) {
+                this.subscriptions.forEach((sub) => {
+                    // sub(this.text, this.meta);
+                });
+            }
+        });
     }
 
     private registerMessageHandler() {
@@ -240,10 +238,6 @@ export default class ComponentRelay {
             return
         }
 
-        if (action === ComponentAction.SaveItems) {
-            data.height = this.params.handleRequestForContentHeight()
-        }
-
         const message = {
             action,
             data,
@@ -322,7 +316,6 @@ export default class ComponentRelay {
             this.contentWindow.document.getElementsByTagName('head')[0].appendChild(link)
         }
 
-        this.params.onThemesChange && this.params.onThemesChange()
     }
 
     private themeElementForUrl(themeUrl: string) {
@@ -487,7 +480,7 @@ export default class ComponentRelay {
             this.pendingSaveItems = []
         }
 
-        if (this.options.coallesedSaving && !skipDebouncer) {
+        if (this.coallesedSavingDelay && !skipDebouncer) {
             if (this.pendingSaveTimeout) {
                 clearTimeout(this.pendingSaveTimeout)
             }
@@ -516,7 +509,7 @@ export default class ComponentRelay {
                 this.pendingSaveItems = []
                 this.pendingSaveTimeout = undefined
                 this.pendingSaveParams = null
-            }, this.options.coallesedSavingDelay)
+            }, this.coallesedSavingDelay)
         } else {
             this.performSavingOfItems({items, presave, callback})
         }
@@ -542,3 +535,6 @@ export default class ComponentRelay {
         return domainData?.[key as AppDataField]
     }
 }
+
+export const snApi = new ComponentRelay();
+export default snApi;

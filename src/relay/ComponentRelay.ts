@@ -1,9 +1,8 @@
-import {environmentToString, generateUuid, isValidJsonString} from './Utils'
+import {generateUuid, isValidJsonString} from './Utils'
 import Logger from './Logger'
 import {
     Component,
     ComponentAction,
-    Environment,
     MessageData,
     MessagePayload,
     MessagePayloadApi,
@@ -30,7 +29,7 @@ class ComponentRelay {
     private generateNotePreview: boolean = true;
 
     public initialize(options: SnMediatorOptions = {}) {
-        Logger.info('debug 6');
+        Logger.info('debug 7');
 
         if (this.contentWindow) {
             Logger.error('fatal: cannot call initialize more than once');
@@ -220,15 +219,15 @@ class ComponentRelay {
 
 
     public get isRunningInDesktopApplication(): boolean {
-        return this.component.environment === environmentToString(Environment.Desktop)
+        return this.component.environment === 'desktop';
     }
 
     public get isRunningInMobileApplication(): boolean {
-        return this.component.environment === environmentToString(Environment.Mobile)
+        return this.component.environment === 'mobile';
     }
 
     public get isRunningInBrowser(): boolean {
-        return this.component.environment === environmentToString(Environment.Web)
+        return this.component.environment === 'web';
     }
 
     private postMessage(action: ComponentAction, data: MessageData, callback?: (...params: any) => void) {

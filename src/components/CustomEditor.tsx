@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {useEffect} from "preact/compat";
-import snApi from "../relay/ComponentRelay";
+import snApi from "../api/snApi";
 
 const CustomEditor = () => {
     const [render, setRender] = useState(0);

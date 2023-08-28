@@ -7,7 +7,8 @@ import {
     NoteContainer,
     SnMediatorOptions
 } from './sn-types';
-import {defaultLogger, getPreviewText, isValidJsonString} from './utils';
+import {getPreviewText, isValidJsonString} from './utils';
+import Logger from "../relay/Logger";
 
 const DEFAULT_COALLESED_SAVING_DELAY = 250;
 const SN_DOMAIN = 'org.standardnotes.sn';
@@ -25,13 +26,11 @@ class StandardNotesExtensionAPI {
     private onThemesChangeCallback?: () => void;
     private subscriptions = [];
     private generateNotePreview: boolean = true;
-    private logObserver: (msgOrError: string | Error) => void;
 
     public initialize(options: SnMediatorOptions = {}) {
-        this.logObserver = options.logObserver || defaultLogger;
-        this.logObserver('start init');
+        Logger.info('start init');
         if (this.contentWindow) {
-            this.logObserver('fatal: cannot call initialize more than once');
+            Logger.error('fatal: cannot call initialize more than once');
         }
         this.contentWindow = window;
         this.coallesedSavingDelay = typeof options.debounceSave !== 'undefined' ? options.debounceSave : DEFAULT_COALLESED_SAVING_DELAY;
@@ -39,8 +38,7 @@ class StandardNotesExtensionAPI {
         try {
             this.registerMessageHandler();
         } catch (e) {
-            this.logObserver('error registering message handler');
-            this.logObserver(e);
+            Logger.error('error registering message handler', e);
         }
 
         this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
@@ -53,8 +51,6 @@ class StandardNotesExtensionAPI {
                 });
             }
         });
-
-        this.logObserver('initialized');
     }
 
     public subscribe(callback: (note: string, meta: any) => void): () => void {
@@ -126,14 +122,12 @@ class StandardNotesExtensionAPI {
 
     private registerMessageHandler() {
         this.contentWindow.addEventListener('message', (event: MessageEvent) => {
-            this.logObserver('start handle event');
             try {
                 if (document.referrer) {
                     const referrer = new URL(document.referrer).origin;
                     const eventOrigin = new URL(event.origin).origin;
 
                     if (referrer !== eventOrigin) {
-                        this.logObserver('wrong origin: ' + referrer + ', ' + eventOrigin);
                         return;
                     }
                 }
@@ -143,30 +137,33 @@ class StandardNotesExtensionAPI {
                 const parsedData = isValidJsonString(data) ? JSON.parse(data) : data;
 
                 if (!parsedData) {
-                    this.logObserver('no parsed data');
                     return;
                 }
 
-                this.handleMessage(parsedData, event);
+                if (typeof this.component.origin === 'undefined' && parsedData.action === ComponentAction.ComponentRegistered) {
+                    this.component.origin = event.origin
+                    Logger.info('origin is: ' + event.origin);
+                } else if (event.origin !== this.component.origin) {
+                    // If event origin doesn't match first-run value, return.
+                    return
+                }
+
+                this.handleMessage(parsedData);
             } catch (e) {
-                this.logObserver('error handling message');
-                this.logObserver(e);
+                Logger.error('error handling message', e);
             }
         }, false);
     }
 
-    private handleMessage(payload: MessagePayload, event: MessageEvent) {
-        this.logObserver('handling message: ' + JSON.stringify(payload));
+    private handleMessage(payload: MessagePayload) {
+        Logger.info('handling message: ' + JSON.stringify(payload));
         switch (payload.action) {
             case ComponentAction.ComponentRegistered:
                 this.component.sessionKey = payload.sessionKey;
                 if (payload.componentData) {
                     this.component.data = payload.componentData;
                 }
-                this.logObserver('origin: ' + event.origin);
-                this.component.origin = event.origin;
                 this.onReady(payload.data);
-                this.logObserver('done with onReady');
                 break;
 
             case ComponentAction.ActivateThemes:
@@ -175,7 +172,6 @@ class StandardNotesExtensionAPI {
 
             default: {
                 if (!payload.original) {
-                    this.logObserver('no original payload');
                     return;
                 }
 
@@ -187,7 +183,6 @@ class StandardNotesExtensionAPI {
                 )[0];
 
                 if (!originalMessage) {
-                    this.logObserver('no original message');
                     return;
                 }
 
@@ -264,7 +259,7 @@ class StandardNotesExtensionAPI {
             postMessagePayload = message;
         }
 
-        this.logObserver('posting message: ' + JSON.stringify(postMessagePayload));
+        Logger.info('posting message: ' + JSON.stringify(postMessagePayload));
 
         // Logger.info('Posting message:', postMessagePayload);
         this.contentWindow.parent.postMessage(

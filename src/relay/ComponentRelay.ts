@@ -1,5 +1,4 @@
 import type {
-    AppDataField,
     DecryptedItem,
     DecryptedTransferPayload,
     ItemContent,
@@ -451,19 +450,6 @@ class ComponentRelay {
         copy.children = null
         copy.parent = null
         return copy
-    }
-
-    /**
-     * Gets the Item's appData value for the specified key.
-     * Uses the default domain (org.standardnotes.sn).
-     * This function is used with Items returned from streamContextItem() and streamItems()
-     * @param item The Item to get the appData value from.
-     * @param key The key to get the value from.
-     */
-    public getItemAppDataValue(item: OutgoingItemMessagePayload | undefined, key: AppDataField | string): any {
-        const defaultDomain = 'org.standardnotes.sn'
-        const domainData = item?.content?.appData?.[defaultDomain]
-        return domainData?.[key as AppDataField]
     }
 }
 

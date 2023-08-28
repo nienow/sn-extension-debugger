@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import snApi from "sn-extension-api";
+import snApi from "../api/snApi";
 
 const TextArea = () => {
   const [value, setValue] = useState(snApi.text);

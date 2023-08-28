@@ -2,7 +2,7 @@ import React from 'react';
 import TextArea from "./TextArea";
 import RowControl from "./RowControl";
 import SpacingControl from "./SpacingControl";
-import snApi from "sn-extension-api";
+import snApi from "../api/snApi";
 
 const CustomEditor = () => {
   const spacing = snApi.extensionMeta?.spacing || 'Default';

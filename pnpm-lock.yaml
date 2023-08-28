@@ -1,9 +1,5 @@
 lockfileVersion: '6.0'
 
-settings:
-  autoInstallPeers: true
-  excludeLinksFromLockfile: false
-
 dependencies:
   '@preact/compat':
     specifier: ^17.1.2
@@ -11,9 +7,6 @@ dependencies:
   preact:
     specifier: ^10.13.2
     version: 10.13.2
-  sn-extension-api:
-    specifier: ^0.3.1
-    version: 0.3.1
 
 devDependencies:
   '@babel/core':
@@ -4580,10 +4573,6 @@ packages:
     engines: {node: '>=12'}
     dev: true
 
-  /sn-extension-api@0.3.1:
-    resolution: {integrity: sha512-JPv5KUCAmv+e6ImdZ2xFUDgxKdaEeGvQX8krHuLSLCcc3f38QNbj2b25mJSAXBJ68h7JOEpFaNOv7V55rB6RNQ==}
-    dev: false
-
   /snapdragon-node@2.1.1:
     resolution: {integrity: sha512-O27l4xaMYt/RSQ5TR3vpWCAB5Kb/czIcqUFOM/C4fYcLnbZUc1PkjTAMjof2pBWaSTwOUd6qUHcFGVGj7aIwnw==}
     engines: {node: '>=0.10.0'}
@@ -5309,3 +5298,7 @@ packages:
       webpack-sources: 3.2.3
       yazl: 2.5.1
     dev: true
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false

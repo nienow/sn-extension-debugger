@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {rerenderRoot} from "../index";
-import snApi from "sn-extension-api";
+import snApi from "../api/snApi";
 
 const options = ['Cozy', 'Default', 'Comfortable'];
 

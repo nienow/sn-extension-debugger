@@ -3,7 +3,7 @@ import React from 'react';
 import './index.scss';
 import {createRoot} from "react-dom/client";
 import CustomEditor from "./components/CustomEditor";
-import snApi from "sn-extension-api";
+import snApi from "./api/snApi";
 
 const root = createRoot(document.getElementById('root'));
 

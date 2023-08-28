@@ -46,6 +46,7 @@ export type MessagePayload = {
 export type SnMediatorOptions = {
   /** Number of milliseconds to wait before saving. Best between 100 and 400ms. **/
   debounceSave?: number;
+  logObserver?: (msgOrError: string | Error) => void;
 }
 
 export type NoteContent = {

@@ -18,3 +18,7 @@ export const isValidJsonString = (str: unknown): boolean => {
     return false;
   }
 };
+
+export const defaultLogger = (msgOrError: string | Error) => {
+  console.log(msgOrError);
+};

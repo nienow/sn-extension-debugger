@@ -1,5 +1,5 @@
 import {Component, ComponentAction, MessageData, MessagePayload, MessagePayloadApi, NoteContainer, SnMediatorOptions} from './sn-types';
-import {getPreviewText, isValidJsonString} from './utils';
+import {defaultLogger, getPreviewText, isValidJsonString} from './utils';
 
 const DEFAULT_COALLESED_SAVING_DELAY = 250;
 const SN_DOMAIN = 'org.standardnotes.sn';
@@ -18,26 +18,19 @@ class StandardNotesExtensionAPI {
   private onThemesChangeCallback?: () => void;
   private subscriptions = [];
   private generateNotePreview: boolean = true;
+  private logObserver: (msgOrError: string | Error) => void;
 
   public initialize(options: SnMediatorOptions = {}) {
     if (this.contentWindow) {
       throw 'Cannot initialize mediator more than once';
     }
     this.contentWindow = window;
+    this.logObserver = options.logObserver || defaultLogger;
     this.coallesedSavingDelay = typeof options.debounceSave !== 'undefined' ? options.debounceSave : DEFAULT_COALLESED_SAVING_DELAY;
     this.registerMessageHandler();
 
     this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
       const {item} = data;
-      const isNewItem =
-        !this.lastStreamedItem || this.lastStreamedItem.uuid !== item.uuid;
-
-      if (isNewItem && this.pendingSaveTimeout) {
-        clearTimeout(this.pendingSaveTimeout);
-        this.performSavingOfItems(this.pendingSaveParams);
-        this.pendingSaveTimeout = undefined;
-        this.pendingSaveParams = undefined;
-      }
 
       this.lastStreamedItem = item;
       if (!this.lastStreamedItem.isMetadataUpdate) {
@@ -117,35 +110,35 @@ class StandardNotesExtensionAPI {
 
   private registerMessageHandler() {
     this.messageHandler = (event: MessageEvent) => {
-      if (document.referrer) {
-        const referrer = new URL(document.referrer).origin;
-        const eventOrigin = new URL(event.origin).origin;
+      try {
+        if (document.referrer) {
+          const referrer = new URL(document.referrer).origin;
+          const eventOrigin = new URL(event.origin).origin;
 
-        if (referrer !== eventOrigin) {
+          if (referrer !== eventOrigin) {
+            return;
+          }
+        }
+
+        // Mobile environment sends data as JSON string.
+        const {data} = event;
+        const parsedData = isValidJsonString(data) ? JSON.parse(data) : data;
+
+        if (!parsedData) {
           return;
         }
+
+        this.handleMessage(parsedData);
+      } catch (e) {
+        this.logObserver('error handling message');
+        this.logObserver(e);
       }
-
-      // Mobile environment sends data as JSON string.
-      const {data} = event;
-      const parsedData = isValidJsonString(data) ? JSON.parse(data) : data;
-
-      if (!parsedData) {
-        return;
-      }
-
-      this.handleMessage(parsedData);
     };
-
-    this.contentWindow.document.addEventListener(
-      'message',
-      this.messageHandler,
-      false,
-    );
     this.contentWindow.addEventListener('message', this.messageHandler, false);
   }
 
   private handleMessage(payload: MessagePayload) {
+    this.logObserver('handling message: ' + JSON.stringify(payload));
     switch (payload.action) {
       case ComponentAction.ComponentRegistered:
         this.component.sessionKey = payload.sessionKey;
@@ -247,6 +240,8 @@ class StandardNotesExtensionAPI {
     } else {
       postMessagePayload = message;
     }
+
+    this.logObserver('posting message: ' + JSON.stringify(postMessagePayload));
 
     // Logger.info('Posting message:', postMessagePayload);
     this.contentWindow.parent.postMessage(

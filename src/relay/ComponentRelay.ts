@@ -1,11 +1,14 @@
-import {environmentToString, generateUuid, isValidJsonString} from './Utils'
+import {generateUuid, isValidJsonString} from './Utils'
 import Logger from './Logger'
-import {MessagePayload} from './Types/MessagePayload'
-import {Component} from './Types/Component'
-import {MessagePayloadApi} from './Types/MessagePayloadApi'
-import {ComponentAction} from './Types/ComponentAction'
-import {Environment} from './Types/Environment'
-import {MessageData, NoteContainer, SnMediatorOptions} from "../api/sn-types";
+import {
+    Component,
+    ComponentAction,
+    MessageData,
+    MessagePayload,
+    MessagePayloadApi,
+    NoteContainer,
+    SnMediatorOptions
+} from "../api/sn-types";
 import {getPreviewText} from "../api/utils";
 
 const DEFAULT_COALLESED_SAVING_DELAY = 250
@@ -25,9 +28,8 @@ class ComponentRelay {
     private subscriptions = [];
     private generateNotePreview: boolean = true;
 
-
     public initialize(options: SnMediatorOptions = {}) {
-        Logger.info('debug 4');
+        Logger.info('debug 5');
 
         if (this.contentWindow) {
             Logger.error('fatal: cannot call initialize more than once');
@@ -216,12 +218,16 @@ class ComponentRelay {
     }
 
 
-    public isRunningInDesktopApplication(): boolean {
-        return this.component.environment === environmentToString(Environment.Desktop)
+    public get isRunningInDesktopApplication(): boolean {
+        return this.component.environment === 'desktop';
     }
 
-    public isRunningInMobileApplication(): boolean {
-        return this.component.environment === environmentToString(Environment.Mobile)
+    public get isRunningInMobileApplication(): boolean {
+        return this.component.environment === 'native-mobile-web';
+    }
+
+    public get isRunningInBrowser(): boolean {
+        return this.component.environment === 'web';
     }
 
     private postMessage(action: ComponentAction, data: MessageData, callback?: (...params: any) => void) {
@@ -251,10 +257,10 @@ class ComponentRelay {
         sentMessage.callback = callback
         this.sentMessages.push(sentMessage)
 
-        let postMessagePayload
+        let postMessagePayload;
 
         // Mobile (React Native) requires a string for the postMessage API.
-        if (this.isRunningInMobileApplication()) {
+        if (this.isRunningInMobileApplication) {
             postMessagePayload = JSON.stringify(message)
         } else {
             postMessagePayload = message
@@ -339,16 +345,10 @@ class ComponentRelay {
         return generateUuid()
     }
 
-    /**
-     * Gets the current platform where the component is running.
-     */
     public get platform(): string | undefined {
         return this.component.platform
     }
 
-    /**
-     * Gets the current environment where the component is running.
-     */
     public get environment(): string | undefined {
         return this.component.environment
     }

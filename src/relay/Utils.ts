@@ -1,5 +1,3 @@
-import {Environment} from './Types/Environment'
-
 declare global {
     interface Window {
         msCrypto: unknown
@@ -21,17 +19,4 @@ export const isValidJsonString = (str: unknown): boolean => {
     } catch (e) {
         return false
     }
-}
-
-export const environmentToString = (environment: Environment): string => {
-    const map = {
-        [Environment.Web]: 'web',
-        [Environment.Desktop]: 'desktop',
-        [Environment.Mobile]: 'mobile',
-    }
-    return map[environment] ?? map[Environment.Web]
-}
-
-export const isNotUndefinedOrNull = (value: any): boolean => {
-    return value !== null && value !== undefined
 }

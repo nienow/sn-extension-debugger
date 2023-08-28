@@ -20,7 +20,7 @@ snApi.initialize({
     debounceSave: 400
 });
 
-snApi.streamContextItem((note) => {
+snApi.subscribe((note) => {
     all_logs.push('got note: ' + JSON.stringify(note));
 });
 

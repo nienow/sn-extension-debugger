@@ -31,9 +31,11 @@ class ComponentRelay {
     private coallesedSavingDelay;
     private subscriptions = [];
 
+    // private generateNotePreview: boolean = true;
+
 
     public initialize(options: SnMediatorOptions = {}) {
-        Logger.info('debug 2');
+        Logger.info('debug 3');
 
         if (this.contentWindow) {
             Logger.error('fatal: cannot call initialize more than once');
@@ -48,13 +50,86 @@ class ComponentRelay {
             const {item} = data;
 
             this.lastStreamedItem = item;
-            Logger.info('received note', item);
             if (!this.lastStreamedItem.isMetadataUpdate) {
                 this.subscriptions.forEach((sub) => {
-                    // sub(this.text, this.meta);
+                    sub(this.text, this.meta);
                 });
             }
         });
+    }
+
+    public subscribe(callback: (note: string, meta: any) => void): () => void {
+        this.subscriptions.push(callback);
+        if (this.lastStreamedItem) {
+            setTimeout(() => {
+                callback(this.text, this.meta);
+            });
+        }
+        return () => {
+            const index = this.subscriptions.indexOf(callback);
+            if (index >= 0) {
+                this.subscriptions.splice(index, 1);
+            }
+        };
+    };
+
+    public get text(): string {
+        this.checkNoteExists();
+        return this.lastStreamedItem?.content?.text || '';
+    }
+
+    public get meta(): any {
+        this.checkNoteExists();
+        if (this.lastStreamedItem?.content) {
+            return this.lastStreamedItem.content.appData[this.lastStreamedItem.content.editorIdentifier];
+        }
+        return {};
+    }
+
+    public get extensionMeta(): any {
+        return this.component.data;
+    }
+
+    public get locked(): boolean {
+        this.checkNoteExists();
+        return this.lastStreamedItem?.content?.appData[SN_DOMAIN]['locked'];
+    }
+
+    public get preview(): string {
+        this.checkNoteExists();
+        return this.lastStreamedItem?.content?.preview_plain;
+    }
+
+    // public set text(newText: string) {
+    //     this.checkNoteExists();
+    //     this.lastStreamedItem.content.text = newText;
+    //     this.saveNote(this.lastStreamedItem);
+    // };
+
+    // public set preview(newPreview: string) {
+    //     this.checkNoteExists();
+    //     this.generateNotePreview = false;
+    //     this.lastStreamedItem.content.preview_plain = newPreview;
+    // }
+
+    // public set meta(newMeta: any) {
+    //     this.checkNoteExists();
+    //     this.lastStreamedItem.content.appData[this.lastStreamedItem.content.editorIdentifier] = newMeta;
+    //     this.saveNote(this.lastStreamedItem);
+    // };
+
+    public set extensionMeta(data: any) {
+        this.component.data = data;
+        this.postMessage(ComponentAction.SetComponentData, {
+            componentData: data
+        });
+    }
+
+    private checkNoteExists() {
+        if (!this.lastStreamedItem) {
+            Logger.error('note does not exist!');
+            throw 'Trying to interact with note before it is received from Standard Notes. Use subscribe function.';
+        }
     }
 
     private registerMessageHandler() {

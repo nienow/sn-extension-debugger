@@ -1,5 +1,4 @@
 import React, {useState} from 'react';
-import {rerenderRoot} from "../index";
 import snApi from "../api/snApi";
 
 const options = ['Cozy', 'Default', 'Comfortable'];
@@ -11,7 +10,6 @@ const SpacingControl = () => {
     const newSpacing = e.target.value;
     setSpacing(newSpacing);
     snApi.extensionMeta = {spacing: newSpacing};
-    rerenderRoot();
   };
 
   return (

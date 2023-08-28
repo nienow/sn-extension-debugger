@@ -1,10 +1,3 @@
-import type {
-    DecryptedItem,
-    DecryptedTransferPayload,
-    ItemContent,
-    MessageData,
-    OutgoingItemMessagePayload,
-} from '@standardnotes/snjs'
 import {environmentToString, generateUuid, isValidJsonString} from './Utils'
 import Logger from './Logger'
 import {MessagePayload} from './Types/MessagePayload'
@@ -12,7 +5,7 @@ import {Component} from './Types/Component'
 import {MessagePayloadApi} from './Types/MessagePayloadApi'
 import {ComponentAction} from './Types/ComponentAction'
 import {Environment} from './Types/Environment'
-import {NoteContainer, SnMediatorOptions} from "../api/sn-types";
+import {MessageData, NoteContainer, SnMediatorOptions} from "../api/sn-types";
 import {getPreviewText} from "../api/utils";
 
 const DEFAULT_COALLESED_SAVING_DELAY = 250
@@ -23,19 +16,18 @@ class ComponentRelay {
     private component: Component = {activeThemes: [], acceptsThemes: true}
     private sentMessages: MessagePayload[] = []
     private messageQueue: MessagePayload[] = []
-    private lastStreamedItem?: DecryptedTransferPayload
-    private pendingSaveItems?: DecryptedTransferPayload[]
+    private lastStreamedItem?: NoteContainer;
+    private pendingSaveItems?: NoteContainer[];
     private pendingSaveTimeout?: NodeJS.Timeout
     private pendingSaveParams?: any
     private messageHandler?: (event: any) => void
     private coallesedSavingDelay;
     private subscriptions = [];
-
     private generateNotePreview: boolean = true;
 
 
     public initialize(options: SnMediatorOptions = {}) {
-        Logger.info('debug 3');
+        Logger.info('debug 4');
 
         if (this.contentWindow) {
             Logger.error('fatal: cannot call initialize more than once');
@@ -136,11 +128,6 @@ class ComponentRelay {
         this.messageHandler = (event: MessageEvent) => {
             Logger.info('Components API Message received:', event.data)
 
-            /**
-             * We don't have access to window.parent.origin due to cross-domain restrictions.
-             * Check referrer if available, otherwise defer to checking for first-run value.
-             * Craft URL objects so that example.com === example.com/
-             */
             if (document.referrer) {
                 const referrer = new URL(document.referrer).origin
                 const eventOrigin = new URL(event.origin).origin
@@ -159,10 +146,6 @@ class ComponentRelay {
                 return
             }
 
-            /**
-             * The Component Registered message will be the most reliable one, so we won't change it after any subsequent events,
-             * in case you receive an event from another window.
-             */
             if (typeof this.component.origin === 'undefined' && parsedData.action === ComponentAction.ComponentRegistered) {
                 this.component.origin = event.origin
                 Logger.info('origin is: ' + event.origin);
@@ -204,16 +187,7 @@ class ComponentRelay {
                 })[0]
 
                 if (!originalMessage) {
-                    // Connection must have been reset. We should alert the user unless it's a reply,
-                    // in which case we may have been deallocated and reinitialized and lost the
-                    // original message
-                    const extensionName = this.contentWindow.document.title
-                    const alertMessage = (
-                        `The extension '${extensionName}' is attempting to communicate with Standard Notes, ` +
-                        'but an error is preventing it from doing so. Please restart this extension and try again.'
-                    ).replace('  ', ' ')
-
-                    Logger.info(alertMessage)
+                    Logger.info('no original message');
                     return
                 }
 
@@ -223,7 +197,7 @@ class ComponentRelay {
         }
     }
 
-    private onReady(data: MessageData) {
+    private onReady(data: any) {
         this.component.environment = data.environment
         this.component.platform = data.platform
         this.component.uuid = data.uuid
@@ -238,20 +212,14 @@ class ComponentRelay {
 
         this.activateThemes(data.activeThemeUrls || [])
 
-        // After activateThemes is done, we want to send a message with the ThemesActivated action.
         this.postMessage(ComponentAction.ThemesActivated, {})
     }
 
-    /**
-     * Checks if the component is running in a Desktop application.
-     */
+
     public isRunningInDesktopApplication(): boolean {
         return this.component.environment === environmentToString(Environment.Desktop)
     }
 
-    /**
-     * Checks if the component is running in a Mobile application.
-     */
     public isRunningInMobileApplication(): boolean {
         return this.component.environment === environmentToString(Environment.Mobile)
     }
@@ -445,7 +413,7 @@ class ComponentRelay {
         }
     }
 
-    private jsonObjectForItem(item: DecryptedItem | DecryptedTransferPayload) {
+    private jsonObjectForItem(item: MessageData) {
         const copy = Object.assign({}, item) as any
         copy.children = null
         copy.parent = null

@@ -145,6 +145,7 @@ class StandardNotesExtensionAPI {
         this.logObserver(e);
       }
     };
+    this.contentWindow.document.addEventListener('message', this.messageHandler, false);
     this.contentWindow.addEventListener('message', this.messageHandler, false);
   }
 
@@ -159,10 +160,11 @@ class StandardNotesExtensionAPI {
         this.logObserver('origin: ' + event.origin);
         this.component.origin = event.origin;
         this.onReady(payload.data);
+        this.logObserver('done with onReady');
         break;
 
       case ComponentAction.ActivateThemes:
-        this.activateThemes(payload.data.themes);
+        // this.activateThemes(payload.data.themes);
         break;
 
       default: {
@@ -178,6 +180,7 @@ class StandardNotesExtensionAPI {
         )[0];
 
         if (!originalMessage) {
+          this.logObserver('no original message');
           return;
         }
 

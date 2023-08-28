@@ -4,6 +4,9 @@ dependencies:
   '@preact/compat':
     specifier: ^17.1.2
     version: 17.1.2(preact@10.13.2)
+  '@standardnotes/snjs':
+    specifier: ^2.202.58
+    version: 2.202.58
   preact:
     specifier: ^10.13.2
     version: 10.13.2
@@ -1400,6 +1403,11 @@ packages:
       preact: '*'
     dependencies:
       preact: 10.13.2
+    dev: false
+
+  /@standardnotes/snjs@2.202.58:
+    resolution: {integrity: sha512-feg/gtPKU2KGeVLNJ/bZyYjdTAC8Y78OE5Ci4YN0d9C3eiHPZV6KqcK9YUHPAlEVaF83aZTbAlbktRPWuccBBA==}
+    engines: {node: '>=16.0.0 <17.0.0'}
     dev: false
 
   /@tsconfig/node10@1.0.9:

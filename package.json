@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@preact/compat": "^17.1.2",
+    "@standardnotes/snjs": "^2.202.58",
     "preact": "^10.13.2"
   },
   "devDependencies": {

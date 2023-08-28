@@ -1,25 +1,26 @@
 import React, {useState} from 'react';
 import {useEffect} from "preact/compat";
-import {output_logs} from "../index";
+import {all_logs} from "../relay/Logger";
+// import {output_logs} from "../index";
 
 const LogOutput = () => {
-  const [logs, setLogs] = useState([]);
+    const [logs, setLogs] = useState([]);
 
-  useEffect(() => {
-    setInterval(() => {
-      setLogs([...output_logs]);
-    }, 1000);
-  }, []);
+    useEffect(() => {
+        setInterval(() => {
+            setLogs([...all_logs]);
+        }, 1000);
+    }, []);
 
-  return (
-    <div>
-      {
-        logs.map((log, i) => {
-          return <div key={i}>{log}</div>
-        })
-      }
-    </div>
-  );
+    return (
+        <div>
+            {
+                logs.map((log, i) => {
+                    return <div key={i}>{log}</div>
+                })
+            }
+        </div>
+    );
 }
 
 export default LogOutput

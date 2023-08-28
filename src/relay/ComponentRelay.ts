@@ -13,9 +13,11 @@ import {Component} from './Types/Component'
 import {MessagePayloadApi} from './Types/MessagePayloadApi'
 import {ComponentAction} from './Types/ComponentAction'
 import {Environment} from './Types/Environment'
-import {SnMediatorOptions} from "../api/sn-types";
+import {NoteContainer, SnMediatorOptions} from "../api/sn-types";
+import {getPreviewText} from "../api/utils";
 
 const DEFAULT_COALLESED_SAVING_DELAY = 250
+const SN_DOMAIN = 'org.standardnotes.sn';
 
 class ComponentRelay {
     private contentWindow: Window
@@ -27,11 +29,10 @@ class ComponentRelay {
     private pendingSaveTimeout?: NodeJS.Timeout
     private pendingSaveParams?: any
     private messageHandler?: (event: any) => void
-    private concernTimeouts: NodeJS.Timeout[] = []
     private coallesedSavingDelay;
     private subscriptions = [];
 
-    // private generateNotePreview: boolean = true;
+    private generateNotePreview: boolean = true;
 
 
     public initialize(options: SnMediatorOptions = {}) {
@@ -100,23 +101,23 @@ class ComponentRelay {
         return this.lastStreamedItem?.content?.preview_plain;
     }
 
-    // public set text(newText: string) {
-    //     this.checkNoteExists();
-    //     this.lastStreamedItem.content.text = newText;
-    //     this.saveNote(this.lastStreamedItem);
-    // };
+    public set text(newText: string) {
+        this.checkNoteExists();
+        this.lastStreamedItem.content.text = newText;
+        this.saveNote(this.lastStreamedItem);
+    };
 
-    // public set preview(newPreview: string) {
-    //     this.checkNoteExists();
-    //     this.generateNotePreview = false;
-    //     this.lastStreamedItem.content.preview_plain = newPreview;
-    // }
+    public set preview(newPreview: string) {
+        this.checkNoteExists();
+        this.generateNotePreview = false;
+        this.lastStreamedItem.content.preview_plain = newPreview;
+    }
 
-    // public set meta(newMeta: any) {
-    //     this.checkNoteExists();
-    //     this.lastStreamedItem.content.appData[this.lastStreamedItem.content.editorIdentifier] = newMeta;
-    //     this.saveNote(this.lastStreamedItem);
-    // };
+    public set meta(newMeta: any) {
+        this.checkNoteExists();
+        this.lastStreamedItem.content.appData[this.lastStreamedItem.content.editorIdentifier] = newMeta;
+        this.saveNote(this.lastStreamedItem);
+    };
 
     public set extensionMeta(data: any) {
         this.component.data = data;
@@ -256,49 +257,6 @@ class ComponentRelay {
         return this.component.environment === environmentToString(Environment.Mobile)
     }
 
-    /**
-     * Gets the component's data value for the specified key.
-     * @param key The key for the data object.
-     * @returns `undefined` if the value for the key does not exist. Returns the stored value otherwise.
-     */
-    public getComponentDataValueForKey(key: string): any {
-        if (!this.component.data) {
-            return
-        }
-        return this.component.data[key]
-    }
-
-    /**
-     * Sets the component's data value for the specified key.
-     * @param key The key for the data object.
-     * @param value The value to store under the specified key.
-     */
-    public setComponentDataValueForKey(key: string, value: any): void {
-        if (!this.component.data) {
-            throw new Error('The component has not been initialized.')
-        }
-        if (!key || (key && key.length === 0)) {
-            throw new Error('The key for the data value should be a valid string.')
-        }
-        this.component.data = {
-            ...this.component.data,
-            [key]: value,
-        }
-        this.postMessage(ComponentAction.SetComponentData, {
-            componentData: this.component.data,
-        })
-    }
-
-    /**
-     * Clears the component's data object.
-     */
-    public clearComponentData(): void {
-        this.component.data = {}
-        this.postMessage(ComponentAction.SetComponentData, {
-            componentData: this.component.data,
-        })
-    }
-
     private postMessage(action: ComponentAction, data: MessageData, callback?: (...params: any) => void) {
         /**
          * If the sessionKey is not set, we push the message to queue
@@ -428,166 +386,63 @@ class ComponentRelay {
         return this.component.environment
     }
 
-
-    // /**
-    //  * Streams the current Item in context.
-    //  * @param callback A callback to process the streamed item.
-    //  */
-    // public streamContextItem(callback: (data: any) => void): void {
-    //     this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
-    //         const {item} = data
-    //         /**
-    //          * If this is a new context item than the context item the component was currently entertaining,
-    //          * we want to immediately commit any pending saves, because if you send the new context item to the
-    //          * component before it has commited its presave, it will end up first replacing the UI with new context item,
-    //          * and when the debouncer executes to read the component UI, it will be reading the new UI for the previous item.
-    //          */
-    //         const isNewItem = !this.lastStreamedItem || this.lastStreamedItem.uuid !== item.uuid
-    //
-    //         if (isNewItem && this.pendingSaveTimeout) {
-    //             clearTimeout(this.pendingSaveTimeout)
-    //             this.performSavingOfItems(this.pendingSaveParams)
-    //             this.pendingSaveTimeout = undefined
-    //             this.pendingSaveParams = undefined
-    //         }
-    //
-    //         this.lastStreamedItem = item
-    //         callback(this.lastStreamedItem)
-    //     })
-    // }
-
-
-    /**
-     * Saves an existing Item in the item store.
-     * @param item An existing Item to be saved.
-     * @param callback
-     * @param skipDebouncer
-     */
-    public saveItem(item: DecryptedTransferPayload, callback?: () => void, skipDebouncer = false): void {
-        this.saveItems([item], callback, skipDebouncer)
-    }
-
-    /**
-     * Runs a callback before saving an Item.
-     * @param item An existing Item to be saved.
-     * @param presave Allows clients to perform any actions last second before the save actually occurs (like setting previews).
-     * Saves debounce by default, so if a client needs to compute a property on an item before saving, it's best to
-     * hook into the debounce cycle so that clients don't have to implement their own debouncing.
-     * @param callback
-     */
-    public saveItemWithPresave<C extends ItemContent = ItemContent>(
-        item: DecryptedTransferPayload<C>,
-        presave: any,
-        callback?: () => void,
-    ): void {
-        this.saveItemsWithPresave([item], presave, callback)
-    }
-
-    /**
-     * Runs a callback before saving a collection of Items.
-     * @param items A collection of existing Items to be saved.
-     * @param presave Allows clients to perform any actions last second before the save actually occurs (like setting previews).
-     * Saves debounce by default, so if a client needs to compute a property on an item before saving, it's best to
-     * hook into the debounce cycle so that clients don't have to implement their own debouncing.
-     * @param callback
-     */
-    public saveItemsWithPresave(items: DecryptedTransferPayload[], presave: any, callback?: () => void): void {
-        this.saveItems(items, callback, false, presave)
-    }
-
-    private performSavingOfItems({
-                                     items,
-                                     presave,
-                                     callback,
-                                 }: {
-        items: DecryptedTransferPayload[]
-        presave: () => void
+    private performSavingOfItems({items, callback}: {
+        items: NoteContainer[]
         callback?: () => void
     }) {
-        const ConcernIntervalMS = 5000
-        const concernTimeout = setTimeout(() => {
-            this.concernTimeouts.forEach((timeout) => clearTimeout(timeout))
-            alert(
-                'This editor is unable to communicate with Standard Notes. ' +
-                'Your changes may not be saved. Please backup your changes, then restart the ' +
-                'application and try again.',
-            )
-        }, ConcernIntervalMS)
+        if (this.generateNotePreview) {
+            items[0].content.preview_plain = getPreviewText(items[0].content.text);
+        }
 
-        this.concernTimeouts.push(concernTimeout)
-
-        /**
-         * Presave block allows client to gain the benefit of performing something in the debounce cycle.
-         */
-        presave && presave()
-
-        const mappedItems = []
+        const mappedItems = [];
         for (const item of items) {
-            mappedItems.push(this.jsonObjectForItem(item))
+            mappedItems.push(this.jsonObjectForItem(item));
         }
 
-        const wrappedCallback = () => {
-            this.concernTimeouts.forEach((timeout) => clearTimeout(timeout))
-            callback?.()
-        }
-
-        this.postMessage(ComponentAction.SaveItems, {items: mappedItems}, wrappedCallback)
+        this.postMessage(
+            ComponentAction.SaveItems,
+            {items: mappedItems},
+            () => {
+                callback?.();
+            },
+        );
     }
 
-    /**
-     * Saves a collection of existing Items.
-     * @param items The items to be saved.
-     * @param callback
-     * @param skipDebouncer Allows saves to go through right away rather than waiting for timeout.
-     * This should be used when saving items via other means besides keystrokes.
-     * @param presave
-     */
-    public saveItems(
-        items: DecryptedTransferPayload[],
+    private saveNote(
+        item: NoteContainer,
         callback?: () => void,
-        skipDebouncer = false,
-        presave?: any,
     ): void {
-        /**
-         * We need to make sure that when we clear a pending save timeout,
-         * we carry over those pending items into the new save.
-         */
+        const items = [item];
         if (!this.pendingSaveItems) {
-            this.pendingSaveItems = []
+            this.pendingSaveItems = [];
         }
 
-        if (this.coallesedSavingDelay && !skipDebouncer) {
+        if (this.coallesedSavingDelay) {
             if (this.pendingSaveTimeout) {
-                clearTimeout(this.pendingSaveTimeout)
+                clearTimeout(this.pendingSaveTimeout);
             }
 
-            const incomingIds = items.map((item) => item.uuid)
-            /**
-             * Replace any existing save items with incoming values.
-             * Only keep items here who are not in incomingIds.
-             */
+            const incomingIds = items.map((item) => item.uuid);
+
             const preexistingItems = this.pendingSaveItems.filter((item) => {
-                return !incomingIds.includes(item.uuid)
-            })
+                return !incomingIds.includes(item.uuid);
+            });
 
-            // Add new items, now that we've made sure it's cleared of incoming items.
-            this.pendingSaveItems = preexistingItems.concat(items)
+            this.pendingSaveItems = preexistingItems.concat(items);
 
-            // We'll potentially need to commit early if stream-context-item message comes in.
             this.pendingSaveParams = {
                 items: this.pendingSaveItems,
-                presave,
                 callback,
-            }
+            };
 
             this.pendingSaveTimeout = setTimeout(() => {
-                this.performSavingOfItems(this.pendingSaveParams)
-                this.pendingSaveItems = []
-                this.pendingSaveTimeout = undefined
-                this.pendingSaveParams = null
-            }, this.coallesedSavingDelay)
+                this.performSavingOfItems(this.pendingSaveParams);
+                this.pendingSaveItems = [];
+                this.pendingSaveTimeout = undefined;
+                this.pendingSaveParams = null;
+            }, this.coallesedSavingDelay);
         } else {
-            this.performSavingOfItems({items, presave, callback})
+            this.performSavingOfItems({items, callback});
         }
     }
 

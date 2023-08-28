@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
-import snApi from "../api/snApi";
 import {useEffect} from "preact/compat";
+import snApi from "../relay/ComponentRelay";
 
 const CustomEditor = () => {
     const [render, setRender] = useState(0);
@@ -14,7 +14,7 @@ const CustomEditor = () => {
     if (render) {
         return (
             <div>
-                Hello World
+                {snApi.text}
             </div>
         );
     } else {

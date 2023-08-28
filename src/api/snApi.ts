@@ -201,7 +201,7 @@ class StandardNotesExtensionAPI {
 
     this.messageQueue = [];
 
-    this.activateThemes(data.activeThemeUrls || []);
+    // this.activateThemes(data.activeThemeUrls || []);
     this.postMessage(ComponentAction.ThemesActivated, {});
   }
 

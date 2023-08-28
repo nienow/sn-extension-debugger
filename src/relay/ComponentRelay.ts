@@ -48,6 +48,7 @@ class ComponentRelay {
             const {item} = data;
 
             this.lastStreamedItem = item;
+            Logger.info('received note', item);
             if (!this.lastStreamedItem.isMetadataUpdate) {
                 this.subscriptions.forEach((sub) => {
                     // sub(this.text, this.meta);
@@ -353,32 +354,32 @@ class ComponentRelay {
     }
 
 
-    /**
-     * Streams the current Item in context.
-     * @param callback A callback to process the streamed item.
-     */
-    public streamContextItem(callback: (data: any) => void): void {
-        this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
-            const {item} = data
-            /**
-             * If this is a new context item than the context item the component was currently entertaining,
-             * we want to immediately commit any pending saves, because if you send the new context item to the
-             * component before it has commited its presave, it will end up first replacing the UI with new context item,
-             * and when the debouncer executes to read the component UI, it will be reading the new UI for the previous item.
-             */
-            const isNewItem = !this.lastStreamedItem || this.lastStreamedItem.uuid !== item.uuid
-
-            if (isNewItem && this.pendingSaveTimeout) {
-                clearTimeout(this.pendingSaveTimeout)
-                this.performSavingOfItems(this.pendingSaveParams)
-                this.pendingSaveTimeout = undefined
-                this.pendingSaveParams = undefined
-            }
-
-            this.lastStreamedItem = item
-            callback(this.lastStreamedItem)
-        })
-    }
+    // /**
+    //  * Streams the current Item in context.
+    //  * @param callback A callback to process the streamed item.
+    //  */
+    // public streamContextItem(callback: (data: any) => void): void {
+    //     this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
+    //         const {item} = data
+    //         /**
+    //          * If this is a new context item than the context item the component was currently entertaining,
+    //          * we want to immediately commit any pending saves, because if you send the new context item to the
+    //          * component before it has commited its presave, it will end up first replacing the UI with new context item,
+    //          * and when the debouncer executes to read the component UI, it will be reading the new UI for the previous item.
+    //          */
+    //         const isNewItem = !this.lastStreamedItem || this.lastStreamedItem.uuid !== item.uuid
+    //
+    //         if (isNewItem && this.pendingSaveTimeout) {
+    //             clearTimeout(this.pendingSaveTimeout)
+    //             this.performSavingOfItems(this.pendingSaveParams)
+    //             this.pendingSaveTimeout = undefined
+    //             this.pendingSaveParams = undefined
+    //         }
+    //
+    //         this.lastStreamedItem = item
+    //         callback(this.lastStreamedItem)
+    //     })
+    // }
 
 
     /**

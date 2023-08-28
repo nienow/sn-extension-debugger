@@ -21,13 +21,20 @@ class StandardNotesExtensionAPI {
   private logObserver: (msgOrError: string | Error) => void;
 
   public initialize(options: SnMediatorOptions = {}) {
+    this.logObserver = options.logObserver || defaultLogger;
+    this.logObserver('start init');
     if (this.contentWindow) {
-      throw 'Cannot initialize mediator more than once';
+      this.logObserver('fatal: cannot call initialize more than once');
     }
     this.contentWindow = window;
-    this.logObserver = options.logObserver || defaultLogger;
     this.coallesedSavingDelay = typeof options.debounceSave !== 'undefined' ? options.debounceSave : DEFAULT_COALLESED_SAVING_DELAY;
-    this.registerMessageHandler();
+
+    try {
+      this.registerMessageHandler();
+    } catch (e) {
+      this.logObserver('error registering message handler');
+      this.logObserver(e);
+    }
 
     this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
       const {item} = data;

@@ -2,8 +2,8 @@ import React from 'react';
 
 import './index.scss';
 import {createRoot} from "react-dom/client";
-import CustomEditor from "./components/CustomEditor";
 import snApi from "./api/snApi";
+import LogOutput from "./components/LogOutput";
 
 const root = createRoot(document.getElementById('root'));
 const logs = [];
@@ -11,9 +11,7 @@ let debounce;
 
 export const rerenderRoot = () => {
   root.render(
-    <React.StrictMode>
-      <CustomEditor logs={logs}/>
-    </React.StrictMode>
+    <LogOutput logs={logs}/>
   );
 };
 

@@ -39,6 +39,8 @@ class StandardNotesExtensionAPI {
         });
       }
     });
+
+    this.logObserver('initialized');
   }
 
   public subscribe(callback: (note: string, meta: any) => void): () => void {

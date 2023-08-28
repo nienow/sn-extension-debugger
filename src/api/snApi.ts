@@ -139,7 +139,7 @@ class StandardNotesExtensionAPI {
           return;
         }
 
-        this.handleMessage(parsedData);
+        this.handleMessage(parsedData, event);
       } catch (e) {
         this.logObserver('error handling message');
         this.logObserver(e);
@@ -148,7 +148,7 @@ class StandardNotesExtensionAPI {
     this.contentWindow.addEventListener('message', this.messageHandler, false);
   }
 
-  private handleMessage(payload: MessagePayload) {
+  private handleMessage(payload: MessagePayload, event: MessageEvent) {
     this.logObserver('handling message: ' + JSON.stringify(payload));
     switch (payload.action) {
       case ComponentAction.ComponentRegistered:
@@ -157,6 +157,8 @@ class StandardNotesExtensionAPI {
           this.component.data = payload.componentData;
         }
         this.onReady(payload.data);
+        this.logObserver('origin: ' + event.origin);
+        this.component.origin = event.origin;
         break;
 
       case ComponentAction.ActivateThemes:
@@ -256,7 +258,7 @@ class StandardNotesExtensionAPI {
 
     // Logger.info('Posting message:', postMessagePayload);
     this.contentWindow.parent.postMessage(
-      postMessagePayload, '*'
+      postMessagePayload, this.component.origin
     );
   }
 

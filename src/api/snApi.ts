@@ -36,16 +36,16 @@ class StandardNotesExtensionAPI {
       this.logObserver(e);
     }
 
-    this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
-      const {item} = data;
-
-      this.lastStreamedItem = item;
-      if (!this.lastStreamedItem.isMetadataUpdate) {
-        this.subscriptions.forEach((sub) => {
-          sub(this.text, this.meta);
-        });
-      }
-    });
+    // this.postMessage(ComponentAction.StreamContextItem, {}, (data) => {
+    //   const {item} = data;
+    //
+    //   this.lastStreamedItem = item;
+    //   if (!this.lastStreamedItem.isMetadataUpdate) {
+    //     this.subscriptions.forEach((sub) => {
+    //       sub(this.text, this.meta);
+    //     });
+    //   }
+    // });
 
     this.logObserver('initialized');
   }

@@ -156,9 +156,9 @@ class StandardNotesExtensionAPI {
         if (payload.componentData) {
           this.component.data = payload.componentData;
         }
-        this.onReady(payload.data);
         this.logObserver('origin: ' + event.origin);
         this.component.origin = event.origin;
+        this.onReady(payload.data);
         break;
 
       case ComponentAction.ActivateThemes:

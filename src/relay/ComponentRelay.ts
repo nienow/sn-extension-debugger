@@ -1,6 +1,5 @@
 import type {
     AppDataField,
-    ContentType,
     DecryptedItem,
     DecryptedTransferPayload,
     ItemContent,
@@ -9,7 +8,6 @@ import type {
 } from '@standardnotes/snjs'
 import {environmentToString, generateUuid, isValidJsonString} from './Utils'
 import Logger from './Logger'
-import {KeyboardModifier} from './Types/KeyboardModifier'
 import {ComponentRelayParams} from './Types/ComponentRelayParams'
 import {MessagePayload} from './Types/MessagePayload'
 import {Component} from './Types/Component'
@@ -30,9 +28,6 @@ export default class ComponentRelay {
     private pendingSaveTimeout?: NodeJS.Timeout
     private pendingSaveParams?: any
     private messageHandler?: (event: any) => void
-    private keyDownEventListener?: (event: KeyboardEvent) => void
-    private keyUpEventListener?: (event: KeyboardEvent) => void
-    private clickEventListener?: (event: MouseEvent) => void
     private concernTimeouts: NodeJS.Timeout[] = []
     private options: ComponentRelayOptions
     private params: Omit<ComponentRelayParams, 'options'>
@@ -57,42 +52,10 @@ export default class ComponentRelay {
         }
 
         Logger.enabled = this.options.debug ?? false
+        Logger.info('debug 1');
 
         this.contentWindow = params.targetWindow
         this.registerMessageHandler()
-        this.registerKeyboardEventListeners()
-        this.registerMouseEventListeners()
-    }
-
-    public deinit(): void {
-        this.params.onReady = undefined
-        this.component = {
-            acceptsThemes: true,
-            activeThemes: [],
-        }
-        this.messageQueue = []
-        this.sentMessages = []
-        this.lastStreamedItem = undefined
-        this.pendingSaveItems = undefined
-        this.pendingSaveTimeout = undefined
-        this.pendingSaveParams = undefined
-
-        if (this.messageHandler) {
-            this.contentWindow.document.removeEventListener('message', this.messageHandler)
-            this.contentWindow.removeEventListener('message', this.messageHandler)
-        }
-
-        if (this.keyDownEventListener) {
-            this.contentWindow.removeEventListener('keydown', this.keyDownEventListener)
-        }
-
-        if (this.keyUpEventListener) {
-            this.contentWindow.removeEventListener('keyup', this.keyUpEventListener)
-        }
-
-        if (this.clickEventListener) {
-            this.contentWindow.removeEventListener('click', this.clickEventListener)
-        }
     }
 
     private registerMessageHandler() {
@@ -137,63 +100,9 @@ export default class ComponentRelay {
             this.handleMessage(parsedData)
         }
 
-        /**
-         * Mobile (React Native) uses `document`, web/desktop uses `window`.addEventListener
-         * for postMessage API to work properly.
-         * Update May 2019:
-         * As part of transitioning React Native webview into the community package,
-         * we'll now only need to use window.addEventListener.
-         * However, we want to maintain backward compatibility for Mobile < v3.0.5, so we'll keep document.addEventListener
-         * Also, even with the new version of react-native-webview, Android may still require document.addEventListener (while iOS still only requires window.addEventListener)
-         * https://github.com/react-native-community/react-native-webview/issues/323#issuecomment-467767933
-         */
-        this.contentWindow.document.addEventListener('message', this.messageHandler, false)
         this.contentWindow.addEventListener('message', this.messageHandler, false)
-
-        Logger.info('Waiting for messages...')
     }
 
-    private registerKeyboardEventListeners() {
-        this.keyDownEventListener = (event: KeyboardEvent) => {
-            Logger.info(`A key has been pressed: ${event.key}`)
-
-            if (event.ctrlKey) {
-                this.keyDownEvent(KeyboardModifier.Ctrl)
-            } else if (event.shiftKey) {
-                this.keyDownEvent(KeyboardModifier.Shift)
-            } else if (event.metaKey || event.key === 'Meta') {
-                this.keyDownEvent(KeyboardModifier.Meta)
-            }
-        }
-
-        this.keyUpEventListener = (event: KeyboardEvent) => {
-            Logger.info(`A key has been released: ${event.key}`)
-
-            /**
-             * Checking using event.key instead of the corresponding boolean properties.
-             */
-            if (event.key === 'Control') {
-                this.keyUpEvent(KeyboardModifier.Ctrl)
-            } else if (event.key === 'Shift') {
-                this.keyUpEvent(KeyboardModifier.Shift)
-            } else if (event.key === 'Meta') {
-                this.keyUpEvent(KeyboardModifier.Meta)
-            }
-        }
-
-        this.contentWindow.addEventListener('keydown', this.keyDownEventListener, false)
-        this.contentWindow.addEventListener('keyup', this.keyUpEventListener, false)
-    }
-
-    private registerMouseEventListeners() {
-        this.clickEventListener = (_event: MouseEvent) => {
-            Logger.info('A click has been performed.')
-
-            this.mouseClickEvent()
-        }
-
-        this.contentWindow.addEventListener('click', this.clickEventListener, false)
-    }
 
     private handleMessage(payload: MessagePayload) {
         switch (payload.action) {
@@ -257,17 +166,6 @@ export default class ComponentRelay {
 
         // After activateThemes is done, we want to send a message with the ThemesActivated action.
         this.postMessage(ComponentAction.ThemesActivated, {})
-
-        if (this.params.onReady) {
-            this.params.onReady()
-        }
-    }
-
-    /**
-     * Gets the component UUID.
-     */
-    public getSelfComponentUUID(): string | undefined {
-        return this.component.uuid
     }
 
     /**
@@ -461,17 +359,6 @@ export default class ComponentRelay {
         return this.component.environment
     }
 
-    /**
-     * Streams a collection of Items, filtered by content type.
-     * New items are passed to the callback as they come.
-     * @param contentTypes A collection of Content Types.
-     * @param callback A callback to process the streamed items.
-     */
-    public streamItems(contentTypes: ContentType[], callback: (data: any) => void): void {
-        this.postMessage(ComponentAction.StreamItems, {content_types: contentTypes}, (data: any) => {
-            callback(data.items)
-        })
-    }
 
     /**
      * Streams the current Item in context.
@@ -500,74 +387,6 @@ export default class ComponentRelay {
         })
     }
 
-    /**
-     * Creates and stores an Item in the item store.
-     * @param item The Item's payload content.
-     * @param callback The callback to process the created Item.
-     */
-    public createItem(item: DecryptedTransferPayload, callback: (data: any) => void): void {
-        this.postMessage(ComponentAction.CreateItem, {item: this.jsonObjectForItem(item)}, (data: any) => {
-            let {item} = data
-            /**
-             * A previous version of the SN app had an issue where the item in the reply to ComponentActions.CreateItems
-             * would be nested inside "items" and not "item". So handle both cases here.
-             */
-            if (!item && data.items && data.items.length > 0) {
-                item = data.items[0]
-            }
-
-            callback && callback(item)
-        })
-    }
-
-    /**
-     * Creates and stores a collection of Items in the item store.
-     * @param items The Item(s) payload collection.
-     * @param callback The callback to process the created Item(s).
-     */
-    public createItems(items: DecryptedTransferPayload[], callback: (data: any) => void): void {
-        const mapped = items.map((item) => this.jsonObjectForItem(item))
-        this.postMessage(ComponentAction.CreateItems, {items: mapped}, (data: any) => {
-            callback && callback(data.items)
-        })
-    }
-
-    /**
-     * Deletes an Item from the item store.
-     * @param item The Item to delete.
-     * @param callback The callback with the result of the operation.
-     */
-    public deleteItem(item: DecryptedTransferPayload, callback: (data: OutgoingItemMessagePayload) => void): void {
-        this.deleteItems([item], callback)
-    }
-
-    /**
-     * Deletes a collection of Items from the item store.
-     * @param items The Item(s) to delete.
-     * @param callback The callback with the result of the operation.
-     */
-    public deleteItems(items: DecryptedTransferPayload[], callback: (data: OutgoingItemMessagePayload) => void): void {
-        const params = {
-            items: items.map((item) => {
-                return this.jsonObjectForItem(item)
-            }),
-        }
-        this.postMessage(ComponentAction.DeleteItems, params, (data) => {
-            callback && callback(data)
-        })
-    }
-
-    /**
-     * Performs a custom action to the component manager.
-     * @param action
-     * @param data
-     * @param callback The callback with the result of the operation.
-     */
-    public sendCustomEvent(action: ComponentAction, data: any, callback?: (data: any) => void): void {
-        this.postMessage(action, data, (data: any) => {
-            callback && callback(data)
-        })
-    }
 
     /**
      * Saves an existing Item in the item store.
@@ -701,42 +520,6 @@ export default class ComponentRelay {
         } else {
             this.performSavingOfItems({items, presave, callback})
         }
-    }
-
-    /**
-     * Sets a new container size for the current component.
-     * @param width The new width.
-     * @param height The new height.
-     */
-    public setSize(width: string | number, height: string | number): void {
-        this.postMessage(ComponentAction.SetSize, {
-            type: 'container',
-            width,
-            height,
-        })
-    }
-
-    /**
-     * Sends the KeyDown keyboard event to the Standard Notes parent application.
-     * @param keyboardModifier The keyboard modifier that was pressed.
-     */
-    private keyDownEvent(keyboardModifier: KeyboardModifier): void {
-        this.postMessage(ComponentAction.KeyDown, {keyboardModifier})
-    }
-
-    /**
-     * Sends the KeyUp keyboard event to the Standard Notes parent application.
-     * @param keyboardModifier The keyboard modifier that was released.
-     */
-    private keyUpEvent(keyboardModifier: KeyboardModifier): void {
-        this.postMessage(ComponentAction.KeyUp, {keyboardModifier})
-    }
-
-    /**
-     * Sends the Click mouse event to the Standard Notes parent application.
-     */
-    private mouseClickEvent(): void {
-        this.postMessage(ComponentAction.Click, {})
     }
 
     private jsonObjectForItem(item: DecryptedItem | DecryptedTransferPayload) {

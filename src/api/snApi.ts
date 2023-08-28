@@ -125,6 +125,7 @@ class StandardNotesExtensionAPI {
           const eventOrigin = new URL(event.origin).origin;
 
           if (referrer !== eventOrigin) {
+            this.logObserver('wrong origin: ' + referrer + ', ' + eventOrigin);
             return;
           }
         }
@@ -134,6 +135,7 @@ class StandardNotesExtensionAPI {
         const parsedData = isValidJsonString(data) ? JSON.parse(data) : data;
 
         if (!parsedData) {
+          this.logObserver('no parsed data');
           return;
         }
 

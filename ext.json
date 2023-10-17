@@ -1,0 +1,11 @@
+{
+  "identifier": "dev.randombits.debugger",
+  "name": "Extension Debugger",
+  "content_type": "SN|Component",
+  "area": "editor-editor",
+  "version": "1.0.0",
+  "description": "A debugger",
+  "url": "https://nienow.github.io/sn-extension-debugger/",
+  "download_url": "https://nienow.github.io/sn-extension-debugger/latest.zip",
+  "latest_url": "https://nienow.github.io/sn-extension-debugger/ext.json"
+}
